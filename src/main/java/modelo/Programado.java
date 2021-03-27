@@ -1,4 +1,4 @@
-package practica2;
+package modelo;
 
 public class Programado extends AlarmaState{
 
