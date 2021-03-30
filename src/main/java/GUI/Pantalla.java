@@ -12,10 +12,11 @@ import java.util.Date;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.SpinnerDateModel;
+import javax.swing.Timer;
 import javax.swing.border.TitledBorder;
 
 import modelo.Alarma;
-import modelo.Alarmas;
+import modelo.ControladorAlarmas;
 
 import javax.swing.JSpinner;
 import javax.swing.JButton;
@@ -24,6 +25,8 @@ import java.awt.Color;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.Console;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 import javax.swing.AbstractListModel;
 import javax.swing.DefaultListModel;
@@ -31,14 +34,21 @@ import javax.swing.DefaultListModel;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
+
 public class Pantalla extends JFrame{
 
 	private JFrame frame;
 	private JTextField textField;
 	private JTextField txtIdAlarma;
-	private DefaultListModel modelActivas = new DefaultListModel<String>();;
-	private DefaultListModel modelDesactivadas = new DefaultListModel<String>();;
+	private DefaultListModel modelActivas = new DefaultListModel<String>();
+	private DefaultListModel modelDesactivadas = new DefaultListModel<String>();
+	private JList listActivas;
+	private JList listDesactivadas;
+	private ControladorAlarmas controladorAlarmas;
+	
+	
 
+	
 	/**
 	 * Launch the application.
 	 */
@@ -66,7 +76,7 @@ public class Pantalla extends JFrame{
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
-		final Alarmas controladorAlarmas = new Alarmas(10);
+	 controladorAlarmas = new ControladorAlarmas(5000);
 		
 		frame = new JFrame();
 		frame.setBounds(100, 100, 450, 500);
@@ -99,19 +109,19 @@ public class Pantalla extends JFrame{
 		lblNewLabel.setBounds(0, 61, 75, 14);
 		panel_1.add(lblNewLabel);
 		
-		final JSpinner spinnerHora = new JSpinner();
+		final JSpinner spinnerHora = new JSpinner(new SpinnerDateModel() );
 		spinnerHora.setBounds(79, 58, 86, 20);
-		SpinnerDateModel model = new SpinnerDateModel();
-		model.setCalendarField(Calendar.MINUTE); 
-		spinnerHora.setModel(model); 
-		spinnerHora.setEditor(new JSpinner.DateEditor(spinnerHora, "h:mm a"));
+		
+		JSpinner.DateEditor timeEditor = new JSpinner.DateEditor(spinnerHora, "HH:mm");
+		spinnerHora.setEditor(timeEditor);
+		spinnerHora.setValue(new Date()); // will only show the current time
 		panel_1.add(spinnerHora);
 		
 		JButton btnNuevaAlarma = new JButton("Nueva Alarma");
-		btnNuevaAlarma.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
+		btnNuevaAlarma.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
 				if(txtIdAlarma.getText().trim().equals("")) {
-					//TODO mostarr aviso
 					System.out.println("No hay nombre de alarma");
 					String aviso = "No hay nombre de alarma";
 					Aviso ventana = new Aviso(aviso);
@@ -119,23 +129,23 @@ public class Pantalla extends JFrame{
 					return;
 				}
 				String id = txtIdAlarma.getText().trim();
-				Date hora = (Date) spinnerHora.getValue();
+				Date fecha = (Date) spinnerHora.getValue();
+				Calendar fecha1 = Calendar.getInstance();
+				fecha1.setTime(fecha);
+				LocalTime hora = LocalTime.of(fecha1.get(Calendar.HOUR_OF_DAY), fecha1.get(Calendar.MINUTE));
 				Alarma alarma = new Alarma(id, hora);
+				
 				if(controladorAlarmas.anhadeAlarma(alarma)) {
 					System.out.println("Alarma añadida correctamente");
-					modelActivas.addElement(id);
+					modelActivas.addElement(id); 
+					controladorAlarmas.cambioProxima();
 				}else {
-					//TODO mostarr aviso
+					String aviso = "Error al añadir alarma";
+					Aviso ventana = new Aviso(aviso);
+					ventana.setVisible(true);
 					System.out.println("Error al añadir alarma");
 					return;
 				}
-					
-			}
-		});
-		btnNuevaAlarma.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				
 			}
 		});
 		btnNuevaAlarma.setBounds(0, 107, 165, 23);
@@ -145,6 +155,7 @@ public class Pantalla extends JFrame{
 		btnApagar.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
+				controladorAlarmas.desactivarMelodia();
 			}
 		});
 		btnApagar.setBounds(20, 151, 130, 80);
@@ -159,7 +170,7 @@ public class Pantalla extends JFrame{
 		panel_2.setBounds(252, 30, 95, 115);
 		panel_1.add(panel_2);
 		
-		JList listActivas = new JList();
+		final JList listActivas = new JList();
 		listActivas.setModel(modelActivas);
 		panel_2.add(listActivas);
 		
@@ -168,7 +179,7 @@ public class Pantalla extends JFrame{
 		panel_2_1.setBounds(252, 205, 95, 115);
 		panel_1.add(panel_2_1);
 		
-		JList listDesactivadas = new JList();
+		listDesactivadas = new JList();
 		listDesactivadas.setModel(modelDesactivadas);
 		panel_2_1.add(listDesactivadas);
 		
@@ -180,6 +191,13 @@ public class Pantalla extends JFrame{
 		btnAlarmaOff.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
+				int i = listActivas.getSelectedIndex();
+				if (i == -1)return;
+				String id = modelActivas.get(i).toString();
+				modelActivas.remove(i);
+				controladorAlarmas.desactivarAlarma(id);
+				controladorAlarmas.cambioProxima();
+				modelDesactivadas.addElement(id);
 			}
 		});
 		btnAlarmaOff.setBounds(218, 331, 62, 23);
@@ -189,6 +207,13 @@ public class Pantalla extends JFrame{
 		btnAlarmaOn.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
+				int i = listDesactivadas.getSelectedIndex();
+				if (i == -1)return;
+				String id = modelDesactivadas.get(i).toString();
+				modelDesactivadas.remove(i);
+				controladorAlarmas.activaAlarma(id);;
+				controladorAlarmas.cambioProxima();
+				modelActivas.addElement(id);
 			}
 		});
 		btnAlarmaOn.setBounds(313, 331, 53, 23);
@@ -198,9 +223,22 @@ public class Pantalla extends JFrame{
 		btnEliminar.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
+				int i = listDesactivadas.getSelectedIndex();
+				if (i == -1) {
+					i = listActivas.getSelectedIndex();
+				}
+				String id = modelDesactivadas.get(i).toString();
+				modelDesactivadas.remove(i);
+				controladorAlarmas.eliminaAlarma(id);
+				controladorAlarmas.cambioProxima();
+				String aviso = "Alarma eliminada correctamente";
+				Aviso ventana = new Aviso(aviso);
+				ventana.setVisible(true);
 			}
 		});
 		btnEliminar.setBounds(252, 383, 89, 23);
 		panel_1.add(btnEliminar);
 	}
+	
+	
 }
