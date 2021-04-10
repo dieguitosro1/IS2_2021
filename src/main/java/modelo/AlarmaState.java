@@ -21,7 +21,7 @@ public abstract class AlarmaState {
 	
 	public void alarmaOn (Alarma context) {}
 	
-	public void sonar (Alarma context, ControladorAlarmas context2) {}
+	public void sonar (Alarma context, ControladorAlarmas controlador) {}
 	
 	public static Desprogramado getEstadoDesprogramado() {
 		return estadoDesprogramado;
