@@ -24,8 +24,7 @@ public class TestFESTSeguroGUI {
 	
 	@Test
 	public void test() {
-		// Comprobamos que la interfaz tiene el aspecto deseado
-		demo.button("btnPulsar").requireText("¡Pulsa!");
+		
 	}	
 		
 
